@@ -1,0 +1,22 @@
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+terraform.tfvars
+
+# Certificates / keys — NEVER commit
+*.pem
+*.crt
+*.key
+*.srl
+certs/
+cfn/certs/
+
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# Misc
+.DS_Store

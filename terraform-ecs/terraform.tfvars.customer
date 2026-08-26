@@ -1,0 +1,44 @@
+# =============================================================================
+# Customer 生产配置 — terraform-ecs + IAM Roles Anywhere
+#
+# 使用方法：cp terraform.tfvars.customer terraform.tfvars && terraform apply
+# 部署记录：2026-08-26，全球区账号 <GLOBAL_ACCOUNT_ID> / us-west-2
+# =============================================================================
+
+region = "us-west-2"
+
+# --- 复用现有 VPC（只需私有子网，且已有 0.0.0.0/0 → NAT 路由）---
+# 复用模式不创建任何网络资源（IGW/NAT/路由表），详见 docs/RISK-REPORT-EXISTING-VPC.md
+vpc_id             = "<VPC_ID>"
+private_subnet_ids = ["<PRIVATE_SUBNET_A>", "<PRIVATE_SUBNET_B>"]
+
+# --- TLS 证书（必须与 ALB 同区域！us-west-2 的 *.example.com）---
+certificate_arn = "arn:aws:acm:us-west-2:<GLOBAL_ACCOUNT_ID>:certificate/<CERT_ID>"
+
+# --- Roles Anywhere（Hub 在中国区账号 <CN_ACCOUNT_ID> / cn-northwest-1）---
+roles_anywhere = {
+  # 注意：secret 必须与 ECS 任务同区域（us-west-2）。
+  # 主密钥在 us-east-1，此处为 replicate-secret-to-regions 生成的副本 ARN。
+  cert_secret_arn  = "arn:aws:secretsmanager:us-west-2:<GLOBAL_ACCOUNT_ID>:secret:/mcp/ra-cert-XXXXXX"
+  key_secret_arn   = "arn:aws:secretsmanager:us-west-2:<GLOBAL_ACCOUNT_ID>:secret:/mcp/ra-key-XXXXXX"
+
+  # 来自 cfn/roles-anywhere-hub.yaml 栈的 Outputs（cn-northwest-1）
+  trust_anchor_arn = "arn:aws-cn:rolesanywhere:cn-northwest-1:<CN_ACCOUNT_ID>:trust-anchor/<TRUST_ANCHOR_ID>"
+  profile_arn      = "arn:aws-cn:rolesanywhere:cn-northwest-1:<CN_ACCOUNT_ID>:profile/<PROFILE_ID>"
+  hub_role_arn     = "arn:aws-cn:iam::<CN_ACCOUNT_ID>:role/mcp-roles-anywhere-hub"
+  region           = "cn-northwest-1"
+}
+
+# --- MCP 账号 ---
+accounts = {
+  aws-cn = {
+    host      = "aws-cn-customer.example.com"
+    # 关键：这是 MCP server 调用 AWS API 的默认目标区域，必须填中国区！
+    # 填成全球区域（如 us-west-2）会导致中国分区凭证被发往全球分区 endpoint，
+    # 所有调用报 UnrecognizedClientException。凭证是 aws-cn 分区级的，
+    # cn-north-1 也可通过命令里显式 --region 访问，不受此默认值限制。
+    aws_region     = "cn-northwest-1"
+    auth_mode      = "roles_anywhere"
+    spoke_role_arn = "arn:aws-cn:iam::<CN_ACCOUNT_ID>:role/mcp-spoke-readonly"
+  }
+}
