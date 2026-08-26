@@ -32,6 +32,10 @@ Spoke Role  mcp-spoke-readonly（aws-cn 分区，两个中国区均可访问）
 - **复用现有 VPC**：`vpc_id` 指定后不创建任何网络资源（IGW/NAT/路由表），只需私有子网
   （须已有 `0.0.0.0/0 → NAT` 路由）。公有子网参数已彻底移除。
 
+> 认证链的完整设计（Trust Anchor / Hub / Spoke 四层信任关系、容器内 credential_process
+> 时序、递归守卫、RequestExpired 历史教训、应急断连）见
+> **[docs/ROLES-ANYWHERE-AUTH-FLOW.md](docs/ROLES-ANYWHERE-AUTH-FLOW.md)**。
+
 ## 环境清单（本次部署实际值）
 
 | 项 | 值 |
@@ -209,5 +213,6 @@ cfn/             Roles Anywhere Hub/Spoke CloudFormation 模板 + 证书生成�
 deploy/          Dockerfile.ra + entrypoint-ra.sh + credential-helper.sh（凭证链核心）
 src/             MCP server 入口与 cn_list_inventory 自定义工具
 terraform-ecs/   ECS Fargate + internal ALB + ECR + IAM 全套 Terraform
-docs/            复用现有 VPC 的风险报告与修复记录
+docs/            ROLES-ANYWHERE-AUTH-FLOW.md（认证链与 AssumeRole 详解）
+                 RISK-REPORT-EXISTING-VPC.md（复用现有 VPC 风险报告与修复记录）
 ```
